@@ -122,50 +122,15 @@
                             </td>
                             <td>
                                 {% if cuota.cobrado < cuota.importe %}
-                                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#pagoModal{{ cuota.id }}">
+                                <button type="button" class="btn btn-sm btn-primary" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#pagoModal{{ cuota.id }}"
+                                        onclick="prepareModal('{{ cuota.id }}', '{{ cuota.importe|subtract:cuota.cobrado|floatformat:2 }}')">
                                     Pagar
                                 </button>
                                 {% endif %}
                             </td>
                         </tr>
-                        
-                        <div class="modal fade" id="pagoModal{{ cuota.id }}" tabindex="-1">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">Registrar Pago - Cuota {{ cuota.cuota }}</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <form method="post" action="{% url 'detalle_venta' venta.id %}">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="cuota_id" value="{{ cuota.id }}">
-                                        <input type="hidden" name="registrar_pago" value="1">
-                                        <div class="modal-body">
-                                            <div class="mb-3">
-                                                <label class="form-label">Importe Total</label>
-                                                <input type="text" class="form-control" value="{{ cuota.importe|floatformat:2 }}" readonly>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Pagado</label>
-                                                <input type="text" class="form-control" value="{{ cuota.cobrado|floatformat:2 }}" readonly>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Saldo</label>
-                                                <input type="text" class="form-control" value="{{ cuota.importe|subtract:cuota.cobrado|floatformat:2 }}" readonly>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Monto a Pagar</label>
-                                                {{ form.monto }}
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                            <button type="submit" class="btn btn-primary">Registrar Pago</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -174,23 +139,65 @@
     </div>
     {% endif %}
 </div>
+
+<!-- Modales para cada cuota -->
+{% for cuota in cuotas %}
+<div class="modal fade" id="pagoModal{{ cuota.id }}" tabindex="-1" aria-labelledby="pagoModalLabel{{ cuota.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="pagoModalLabel{{ cuota.id }}">Registrar Pago - Cuota {{ cuota.cuota }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'detalle_venta' venta.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="cuota_id" value="{{ cuota.id }}">
+                <input type="hidden" name="registrar_pago" value="1">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Importe Total</label>
+                        <input type="text" class="form-control" value="{{ cuota.importe|floatformat:2 }}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Pagado</label>
+                        <input type="text" class="form-control" value="{{ cuota.cobrado|floatformat:2 }}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Saldo</label>
+                        <input type="text" class="form-control" value="{{ cuota.importe|subtract:cuota.cobrado|floatformat:2 }}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="monto{{ cuota.id }}" class="form-label">Monto a Pagar</label>
+                        <input type="number" class="form-control" id="monto{{ cuota.id }}" name="monto" 
+                               step="0.01" min="0.01" 
+                               max="{{ cuota.importe|subtract:cuota.cobrado|floatformat:2 }}"
+                               required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Registrar Pago</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
 {% endblock %}
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('[id^="pagoModal"]').forEach(modal => {
-        modal.addEventListener('show.bs.modal', function() {
-            const saldoInput = modal.querySelector('input[readonly][value*="."]');
-            const montoInput = modal.querySelector('input[name="monto"]');
-            
-            if (saldoInput && montoInput) {
-                const saldo = parseFloat(saldoInput.value);
-                montoInput.max = saldo;
-                montoInput.setAttribute('max', saldo);
-            }
-        });
-    });
-});
+function prepareModal(cuotaId, maxValue) {
+    // Establecer el valor máximo del input de monto
+    const montoInput = document.getElementById('monto' + cuotaId);
+    if (montoInput) {
+        montoInput.max = maxValue;
+        montoInput.value = maxValue;
+    }
+    
+    // Mostrar el modal manualmente si es necesario
+    const modal = new bootstrap.Modal(document.getElementById('pagoModal' + cuotaId));
+    modal.show();
+}
 </script>
 {% endblock %}
