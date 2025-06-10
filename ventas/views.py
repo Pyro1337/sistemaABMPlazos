@@ -5,6 +5,8 @@ from django.contrib import messages
 from django.db.models import Q, Max
 from .models import Ventas, Clientes, TiposDocumento, Plazos, Monedas, Depositos, Talonarios, \
     CuentasCobrar, PlazoDetalles
+from django.http import JsonResponse
+from datetime import datetime, timedelta
 
 class VentaForm(forms.ModelForm):
     class Meta:
@@ -151,3 +153,72 @@ def detalle_venta(request, venta_id):
         'form': form,
     }
     return render(request, 'ventas/detalle_venta.html', context)
+
+def calcular_cuotas_ajax(request):
+    if request.method == 'GET':
+        try:
+            tipodocid = int(request.GET.get('tipodocid'))
+            plazoid = int(request.GET.get('plazoid'))
+            monedaid = int(request.GET.get('monedaid'))
+            totalfactura = float(request.GET.get('totalfactura'))
+            fechafactura_str = request.GET.get('fechafactura')
+
+            if not fechafactura_str:
+                raise ValueError('Fecha de factura requerida.')
+
+            fechafactura = datetime.strptime(fechafactura_str, '%Y-%m-%d').date()
+
+            tipo_doc = TiposDocumento.objects.get(pk=tipodocid)
+            plazo = Plazos.objects.get(pk=plazoid)
+            moneda = Monedas.objects.get(pk=monedaid)
+
+            cuotas = []
+            decimales = moneda.decimales
+            importe_base = round(totalfactura / plazo.cuotas, decimales)
+            ultima_cuota = round(totalfactura - (importe_base * (plazo.cuotas - 1)), decimales)
+
+            if tipo_doc.tipoid == 0:  # Contado
+                cuotas.append({
+                    'cuota': 1,
+                    'importe': round(totalfactura, decimales),
+                    'vence': fechafactura.isoformat(),
+                })
+            else:
+                for i in range(1, plazo.cuotas + 1):
+                    if plazo.irregular:
+                        detalle = PlazoDetalles.objects.get(plazoid=plazo, cuota=i)
+                        dias = detalle.dias
+                        vto = fechafactura + timedelta(days=dias)
+                    else:
+                        vto = fechafactura + timedelta(days=30 * i)
+
+                    cuotas.append({
+                        'cuota': i,
+                        'importe': ultima_cuota if i == plazo.cuotas else importe_base,
+                        'vence': vto.isoformat(),
+                    })
+
+            return JsonResponse({'status': 'ok', 'cuotas': cuotas})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+def crear_cliente_modal(request):
+    if request.method == 'POST':
+        # Obtener el siguiente ID disponible
+        ultimo_id = Clientes.objects.aggregate(max_id=Max('id'))['max_id'] or 0
+        nuevo_id = ultimo_id + 1
+
+        Clientes.objects.create(
+            id=nuevo_id,
+            nombres=request.POST.get('nombres'),
+            apellidos=request.POST.get('apellidos'),
+            documentonro=request.POST.get('documentonro'),
+            direccion=request.POST.get('direccion'),
+            email=request.POST.get('email'),
+            telefono=request.POST.get('telefono'),
+            activo=1
+        )
+
+        from django.contrib import messages
+        messages.success(request, 'Cliente creado correctamente.')
+
+    return redirect('lista_ventas')

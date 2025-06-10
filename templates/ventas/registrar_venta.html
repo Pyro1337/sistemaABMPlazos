@@ -1,47 +1,39 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Registrar Nueva Venta{% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
-    <!-- Encabezado -->
-    <div class="dashboard-header mb-4">
-        <div>
-            <h2 class="mb-0"><i class="fas fa-cash-register me-2 text-gradient-primary"></i>Registrar Nueva Venta</h2>
-            <p class="text-muted mb-0">Complete todos los campos requeridos para registrar una nueva venta</p>
-        </div>
-    </div>
+<style>
+    .form-label {
+        font-weight: 500;
+    }
+</style>
 
-    <!-- Tarjeta del formulario -->
+<div class="container">
     <div class="card">
-        <div class="card-header p-3 pt-2 bg-gradient-primary">
-            <div class="icon icon-lg icon-shape bg-white shadow text-center border-radius-xl mt-n4 position-absolute">
-                <i class="fas fa-receipt text-gradient-primary"></i>
-            </div>
-            <div class="text-end pt-1">
-                <h4 class="mb-0 text-white">Datos de la Venta</h4>
+        <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-cash-register me-2"></i>{{ title }}
+                </h3>
             </div>
         </div>
         
-        <div class="card-body p-4">
+        <div class="card-body">
             {% if messages %}
                 {% for message in messages %}
-                <div class="alert alert-{% if message.tags %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
-                    <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'warning' %}fa-exclamation-triangle{% elif message.tags == 'error' %}fa-times-circle{% else %}fa-info-circle{% endif %} me-2"></i>
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
+                    <div class="alert alert-{% if message.tags %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
                 {% endfor %}
             {% endif %}
             
             <form method="post" class="needs-validation" novalidate>
                 {% csrf_token %}
                 
-                <div class="row g-3">
-                    <!-- Primera fila -->
+                <div class="row mb-2">
                     <div class="col-md-6">
-                        <div class="form-group required">
+                        <div class="required-field">
                             <label for="{{ form.fechafactura.id_for_label }}" class="form-label">Fecha de Factura</label>
                             {{ form.fechafactura }}
                             <div class="invalid-feedback">
@@ -50,23 +42,19 @@
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="form-group required">
+                        <div class="required-field">
                             <label for="{{ form.clienteid.id_for_label }}" class="form-label">Cliente</label>
-                            <div class="input-group">
-                                {{ form.clienteid }}
-                                <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#nuevoClienteModal">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                            </div>
+                            {{ form.clienteid }}
                             <div class="invalid-feedback">
                                 Por favor seleccione un cliente.
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Segunda fila -->
+                </div>
+                
+                <div class="row mb-2">
                     <div class="col-md-6">
-                        <div class="form-group required">
+                        <div class="required-field">
                             <label for="{{ form.tipodocid.id_for_label }}" class="form-label">Tipo de Documento</label>
                             {{ form.tipodocid }}
                             <div class="invalid-feedback">
@@ -75,7 +63,7 @@
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="form-group required">
+                        <div class="required-field">
                             <label for="{{ form.plazoid.id_for_label }}" class="form-label">Plazo de Pago</label>
                             {{ form.plazoid }}
                             <div class="invalid-feedback">
@@ -83,11 +71,12 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Tercera fila -->
+                </div>
+
+                <div class="row mb-2">
                     <div class="col-md-6">
-                        <div class="form-group required">
-                            <label for="{{ form.talonarioid.id_for_label }}" class="form-label">Talonario</label>
+                        <div class="required-field">
+                            <label for="{{ form.talonarioid.id_for_label }}" class="form-label">Talorario</label>
                             {{ form.talonarioid }}
                             <div class="invalid-feedback">
                                 Por favor seleccione un talonario.
@@ -95,7 +84,7 @@
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="form-group required">
+                        <div class="required-field">
                             <label for="{{ form.depositoid.id_for_label }}" class="form-label">Depósito</label>
                             {{ form.depositoid }}
                             <div class="invalid-feedback">
@@ -103,10 +92,11 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Cuarta fila -->
+                </div>
+
+                <div class="row mb-2">
                     <div class="col-md-6">
-                        <div class="form-group required">
+                        <div class="required-field">
                             <label for="{{ form.monedaid.id_for_label }}" class="form-label">Moneda</label>
                             {{ form.monedaid }}
                             <div class="invalid-feedback">
@@ -115,51 +105,42 @@
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="form-group required">
+                        <div class="required-field">
                             <label for="{{ form.totalbase.id_for_label }}" class="form-label">Total Base</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                {{ form.totalbase }}
-                            </div>
+                            {{ form.totalbase }}
                             <div class="invalid-feedback">
-                                Por favor ingrese un total base válido.
+                                Por favor seleccione un total base.
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Quinta fila -->
+                </div>
+
+                <div class="row mb-2">
                     <div class="col-md-6">
-                        <div class="form-group required">
+                        <div class="required-field">
                             <label for="{{ form.totalimpuesto.id_for_label }}" class="form-label">Total Impuesto</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                {{ form.totalimpuesto }}
-                            </div>
+                            {{ form.totalimpuesto }}
                             <div class="invalid-feedback">
-                                Por favor ingrese el impuesto total.
+                                Por favor seleccione el impuesto total.
                             </div>
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="form-group required">
+                        <div class="required-field">
                             <label for="{{ form.totalexento.id_for_label }}" class="form-label">Total Exento</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                {{ form.totalexento }}
-                            </div>
+                            {{ form.totalexento }}
                             <div class="invalid-feedback">
-                                Por favor ingrese el total exento.
+                                Por favor seleccione el total exento.
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Botones de acción -->
-                <div class="d-flex justify-content-between mt-5">
-                    <a href="{% url 'lista_ventas' %}" class="btn btn-outline-secondary btn-rounded">
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                    <a href="{% url 'lista_ventas' %}" class="btn btn-secondary me-md-2">
                         <i class="fas fa-times me-1"></i> Cancelar
                     </a>
-                    <button type="submit" class="btn bg-gradient-primary btn-rounded">
+                    <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save me-1"></i> Guardar Venta
                     </button>
                 </div>
@@ -168,96 +149,15 @@
     </div>
 </div>
 
-<!-- Modal para nuevo cliente (ejemplo) -->
-<div class="modal fade" id="nuevoClienteModal" tabindex="-1" aria-labelledby="nuevoClienteModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-gradient-primary">
-                <h5 class="modal-title text-white" id="nuevoClienteModalLabel">Agregar Nuevo Cliente</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-center py-4">Aquí iría el formulario para agregar un nuevo cliente</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn bg-gradient-primary">Guardar Cliente</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<style>
-    .form-group.required label:after {
-        content: " *";
-        color: #dc3545;
-    }
-    
-    .form-control, .form-select {
-        border-radius: 0.5rem;
-        padding: 0.5rem 1rem;
-        border: 1px solid #dee2e6;
-    }
-    
-    .form-control:focus, .form-select:focus {
-        border-color: #6c5ce7;
-        box-shadow: 0 0 0 0.25rem rgba(108, 92, 231, 0.25);
-    }
-    
-    .invalid-feedback {
-        display: none;
-        color: #dc3545;
-        font-size: 0.875em;
-    }
-    
-    .was-validated .form-control:invalid ~ .invalid-feedback,
-    .was-validated .form-select:invalid ~ .invalid-feedback {
-        display: block;
-    }
-    
-    .was-validated .form-control:invalid,
-    .was-validated .form-select:invalid {
-        border-color: #dc3545;
-    }
-    
-    .was-validated .form-control:valid,
-    .was-validated .form-select:valid {
-        border-color: #198754;
-    }
-    
-    .btn-rounded {
-        border-radius: 2rem;
-        padding: 0.5rem 1.5rem;
-    }
-    
-    .card {
-        border-radius: 1rem;
-        overflow: hidden;
-        box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.1);
-    }
-    
-    .card-header {
-        border-radius: 1rem 1rem 0 0 !important;
-    }
-    
-    .icon-lg {
-        width: 64px;
-        height: 64px;
-        font-size: 1.75rem;
-    }
-    
-    .bg-gradient-primary {
-        background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
-    }
-</style>
-
 <script>
     // Validación del formulario
     (function () {
         'use strict'
         
+        // Obtener todos los formularios a los que queremos aplicar estilos de validación de Bootstrap
         var forms = document.querySelectorAll('.needs-validation')
         
+        // Bucle sobre ellos y evitar el envío
         Array.prototype.slice.call(forms)
             .forEach(function (form) {
                 form.addEventListener('submit', function (event) {
@@ -271,43 +171,17 @@
             })
     })()
     
-    // Mejorar la experiencia de usuario
+    // Mejorar la experiencia de usuario con selects
     document.addEventListener('DOMContentLoaded', function() {
-        // Convertir selects a estilo mejorado
         const selects = document.querySelectorAll('select.form-control');
         selects.forEach(select => {
             select.classList.add('form-select');
         });
         
-        // Configurar datepicker si es necesario
+        // Mejorar el datepicker si es necesario
         const dateInput = document.getElementById('{{ form.fechafactura.id_for_label }}');
         if (dateInput) {
-            dateInput.type = 'date';
             dateInput.classList.add('form-control');
-        }
-        
-        // Configurar campos monetarios
-        const moneyFields = ['totalbase', 'totalimpuesto', 'totalexento'];
-        moneyFields.forEach(field => {
-            const input = document.getElementById('id_' + field);
-            if (input) {
-                input.addEventListener('input', formatMoney);
-                input.addEventListener('blur', formatMoneyOnBlur);
-            }
-        });
-        
-        function formatMoney(e) {
-            let value = e.target.value.replace(/[^0-9.]/g, '');
-            e.target.value = value;
-        }
-        
-        function formatMoneyOnBlur(e) {
-            let value = parseFloat(e.target.value);
-            if (!isNaN(value)) {
-                e.target.value = value.toFixed(2);
-            } else {
-                e.target.value = '0.00';
-            }
         }
     });
 </script>

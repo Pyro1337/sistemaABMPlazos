@@ -1,102 +1,77 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}Listado de Ventas{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <!-- Encabezado con título y botón de nueva venta -->
-    <div class="dashboard-header mb-4">
-        <div>
-            <h2 class="mb-0"><i class="fas fa-list me-2 text-gradient-primary"></i>Listado de Ventas</h2>
-            <p class="text-muted mb-0">Gestión completa de todas las transacciones de venta</p>
-        </div>
-        <a href="{% url 'registrar_venta' %}" class="btn bg-gradient-success btn-rounded">
-            <i class="fas fa-plus me-1"></i> Nueva Venta
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Listado de Ventas</h2>
+        <a href="{% url 'registrar_venta' %}" class="btn btn-primary">
+            Nueva Venta
         </a>
     </div>
 
-    <!-- Barra de búsqueda -->
     <div class="card mb-4">
-        <div class="card-body p-3">
-            <form method="get" class="row g-3 align-items-center">
+        <div class="card-body">
+            <form method="get" class="row g-3">
                 <div class="col-md-10">
-                    <div class="input-group input-group-dynamic">
-                        <span class="input-group-text bg-transparent border-0">
-                            <i class="fas fa-search text-secondary"></i>
-                        </span>
-                        <input type="text" name="q" class="form-control ps-0" 
+                    <div class="input-group">
+                        <input type="text" name="q" class="form-control" 
                                placeholder="Buscar por número, cliente o documento..." 
                                value="{{ request.GET.q }}">
                     </div>
                 </div>
                 <div class="col-md-2">
-                    <button type="submit" class="btn bg-gradient-primary w-100 mb-0">
-                        <i class="fas fa-search me-1"></i> Buscar
+                    <button type="submit" class="btn btn-primary w-100">
+                        Buscar
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Tabla de ventas -->
     <div class="card">
-        <div class="card-header p-3 pt-2 bg-gradient-dark">
-            <div class="icon icon-lg icon-shape bg-white shadow text-center border-radius-xl mt-n4 position-absolute">
-                <i class="fas fa-receipt text-gradient-dark"></i>
-            </div>
-            <div class="text-end pt-1">
-                <h4 class="mb-0 text-white">Registro de Ventas</h4>
-            </div>
+        <div class="card-header bg-dark text-white">
+            <h4 class="mb-0">Registro de Ventas</h4>
         </div>
-        <div class="card-body px-0 pb-2">
-            <div class="table-responsive p-0">
-                <table class="table align-items-center mb-0">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
                     <thead>
                         <tr>
-                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">N° Factura</th>
-                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Fecha</th>
-                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Cliente</th>
-                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Documento</th>
-                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Tipo</th>
-                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-end">Total</th>
-                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Plazo</th>
-                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 text-center">Acciones</th>
+                            <th>N° Factura</th>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th>Documento</th>
+                            <th>Tipo</th>
+                            <th class="text-end">Total</th>
+                            <th>Plazo</th>
+                            <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for venta in ventas %}
                         <tr>
+                            <td>{{ venta.serie }}-{{ venta.nrofactura }}</td>
+                            <td>{{ venta.fechafactura|date:"d/m/Y" }}</td>
+                            <td>{{ venta.clienteid.nombres }} {{ venta.clienteid.apellidos }}</td>
+                            <td>{{ venta.clienteid.documentonro }}</td>
                             <td>
-                                <div class="d-flex px-3 py-1">
-                                    <div class="d-flex flex-column justify-content-center">
-                                        <h6 class="mb-0 text-sm">{{ venta.serie }}-{{ venta.nrofactura }}</h6>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <p class="text-xs font-weight-bold mb-0">{{ venta.fechafactura|date:"d/m/Y" }}</p>
-                            </td>
-                            <td>
-                                <p class="text-xs font-weight-bold mb-0">{{ venta.clienteid.nombres }} {{ venta.clienteid.apellidos }}</p>
-                            </td>
-                            <td>
-                                <p class="text-xs font-weight-bold mb-0">{{ venta.clienteid.documentonro }}</p>
-                            </td>
-                            <td>
-                                <span class="badge badge-sm bg-gradient-info">{{ venta.tipodocid.abrebiatura }}</span>
+                                <span class="badge bg-info">{{ venta.tipodocid.abrebiatura }}</span>
                             </td>
                             <td class="text-end">
-                                <p class="text-xs font-weight-bold mb-0">{{ venta.totalfactura|floatformat:2 }}</p>
+                                {{ venta.totalfactura|floatformat:0|intcomma }} Gs
                             </td>
                             <td>
                                 {% if venta.plazoid %}
-                                    <span class="badge badge-sm bg-gradient-warning">{{ venta.plazoid.plazo }} ({{ venta.plazoid.cuotas }} cuotas)</span>
+                                    <span class="badge bg-warning">{{ venta.plazoid.plazo }} ({{ venta.plazoid.cuotas }} cuotas)</span>
                                 {% else %}
-                                    <span class="badge badge-sm bg-gradient-success">Contado</span>
+                                    <span class="badge bg-success">Contado</span>
                                 {% endif %}
                             </td>
-                            <td class="align-middle text-center">
-                                <a href="{% url 'detalle_venta' venta.id %}" class="btn btn-sm bg-gradient-info mb-0" title="Ver detalles">
+                            <td class="text-center">
+                                <a href="{% url 'detalle_venta' venta.id %}" class="btn btn-sm btn-info" title="Ver">
                                     <i class="fas fa-eye"></i>
                                 </a>
                             </td>
@@ -104,10 +79,8 @@
                         {% empty %}
                         <tr>
                             <td colspan="8" class="text-center py-4">
-                                <div class="d-flex flex-column justify-content-center align-items-center">
-                                    <i class="fas fa-box-open fa-3x text-secondary mb-2"></i>
-                                    <h6 class="text-secondary">No hay ventas registradas</h6>
-                                </div>
+                                <i class="fas fa-box-open fa-2x text-secondary mb-2"></i>
+                                <p class="text-secondary">No hay ventas registradas</p>
                             </td>
                         </tr>
                         {% endfor %}
@@ -117,14 +90,13 @@
         </div>
     </div>
 
-    <!-- Paginación -->
     {% if is_paginated %}
     <nav aria-label="Page navigation" class="mt-4">
         <ul class="pagination justify-content-center">
             {% if page_obj.has_previous %}
             <li class="page-item">
                 <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
-                    <i class="fas fa-chevron-left"></i>
+                    &laquo;
                 </a>
             </li>
             {% endif %}
@@ -146,7 +118,7 @@
             {% if page_obj.has_next %}
             <li class="page-item">
                 <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
-                    <i class="fas fa-chevron-right"></i>
+                    &raquo;
                 </a>
             </li>
             {% endif %}
@@ -154,85 +126,4 @@
     </nav>
     {% endif %}
 </div>
-
-<style>
-    .dashboard-header {
-        background: white;
-        border-radius: 1rem;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.1);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .btn-rounded {
-        border-radius: 2rem;
-        padding: 0.5rem 1.5rem;
-    }
-    
-    .card {
-        border-radius: 1rem;
-        overflow: hidden;
-        box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
-    }
-    
-    .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 25px 0 rgba(0, 0, 0, 0.15);
-    }
-    
-    .card-header {
-        border-radius: 1rem 1rem 0 0 !important;
-    }
-    
-    .icon-lg {
-        width: 64px;
-        height: 64px;
-        font-size: 1.75rem;
-    }
-    
-    .bg-gradient-primary {
-        background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
-    }
-    
-    .bg-gradient-success {
-        background: linear-gradient(135deg, #00b894 0%, #55efc4 100%);
-    }
-    
-    .bg-gradient-info {
-        background: linear-gradient(135deg, #0984e3 0%, #74b9ff 100%);
-    }
-    
-    .bg-gradient-warning {
-        background: linear-gradient(135deg, #fdcb6e 0%, #ffeaa7 100%);
-    }
-    
-    .bg-gradient-danger {
-        background: linear-gradient(135deg, #d63031 0%, #ff7675 100%);
-    }
-    
-    .bg-gradient-dark {
-        background: linear-gradient(135deg, #2d3436 0%, #636e72 100%);
-    }
-    
-    .input-group.input-group-dynamic .form-control,
-    .input-group.input-group-dynamic .form-control:focus {
-        box-shadow: none;
-        border: none;
-        background-image: linear-gradient(0deg, #6c5ce7 2px, rgba(108, 92, 231, 0) 0),
-                          linear-gradient(0deg, #d2d2d2 1px, hsla(0, 0%, 82%, 0) 0);
-    }
-    
-    .page-item.active .page-link {
-        background-color: #6c5ce7;
-        border-color: #6c5ce7;
-    }
-    
-    .page-link {
-        color: #6c5ce7;
-    }
-</style>
 {% endblock %}
