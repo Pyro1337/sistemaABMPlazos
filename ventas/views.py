@@ -7,6 +7,9 @@ from .models import Ventas, Clientes, TiposDocumento, Plazos, Monedas, Depositos
     CuentasCobrar, PlazoDetalles
 from django.http import JsonResponse
 from datetime import datetime, timedelta
+from decimal import Decimal
+from django.db.models import Value as V
+from django.db.models.functions import Concat
 
 class VentaForm(forms.ModelForm):
     class Meta:
@@ -54,7 +57,8 @@ def registrar_venta(request):
                 venta.fechaproceso = venta.fechafactura
                 venta.serie = f'{venta.talonarioid}'
                 venta.nrofactura = obtener_siguiente_numero()
-                venta.totalfactura = venta.totalbase + venta.totalimpuesto # + venta.totalexento # No sé si exento se suma o se resta
+                venta.totalimpuesto = venta.totalbase / Decimal('11.00')  # si base incluye IVA
+                venta.totalfactura = venta.totalbase
                 venta.save()
                 
                 messages.success(request, 'Venta registrada exitosamente!')
@@ -71,25 +75,27 @@ def registrar_venta(request):
     return render(request, 'ventas/registrar_venta.html', context)
 
 def lista_ventas(request):
-    # Obtener todas las ventas ordenadas por fecha más reciente
     ventas = Ventas.objects.all().order_by('-fechafactura', '-nrofactura')
-    
-    # Búsqueda (opcional)
+
     query = request.GET.get('q')
     if query:
-        ventas = ventas.filter(
-            Q(nrofactura__icontains=query) |
+        from django.db.models import Value as V, CharField
+        from django.db.models.functions import Concat
+
+        ventas = ventas.annotate(
+            factura_completa=Concat('serie', V('-'), 'nrofactura', output_field=CharField())
+        ).filter(
+            Q(factura_completa__icontains=query) |
             Q(clienteid__nombres__icontains=query) |
             Q(clienteid__apellidos__icontains=query) |
             Q(clienteid__documentonro__icontains=query)
         )
-    
+
     context = {
         'ventas': ventas,
         'title': 'Listado de Ventas',
     }
     return render(request, 'ventas/lista_ventas.html', context)
-
 
 class PagoCuotaForm(forms.Form):
     monto = forms.DecimalField(
