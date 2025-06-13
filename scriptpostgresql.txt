@@ -1,3 +1,280 @@
+CREATE TABLE TIPOS_DOCUMENTO (
+    id INTEGER NOT NULL,
+    tipo VARCHAR(200) NOT NULL,
+    abrebiatura VARCHAR(5) NOT NULL,
+    tipoid INTEGER NOT NULL,
+    activo SMALLINT NOT NULL,
+    CONSTRAINT pktipodoc PRIMARY KEY (id)
+);
+
+INSERT INTO TIPOS_DOCUMENTO VALUES 
+(1, 'Contado', 'CO', 0, 1),
+(2, 'Crédito', 'CR', 1, 1),
+(3, 'Nota Crédito', 'CO', 0, 1);
+
+-- PLAZOS
+CREATE TABLE PLAZOS (
+    id INTEGER NOT NULL,
+    plazo VARCHAR(100) NOT NULL,
+    tipoid INTEGER NOT NULL,
+    cuotas INTEGER NOT NULL,
+    irregular SMALLINT NOT NULL,
+    CONSTRAINT pkplazo PRIMARY KEY (id)
+);
+
+INSERT INTO PLAZOS VALUES 
+(1, 'Contado', 1, 1, 0),
+(2, 'Crédito 30/60/90 días', 2, 3, 0),
+(3, 'Crédito 15/30/45/55 días', 2, 4, 1);
+
+-- PLAZO_DETALLES
+CREATE TABLE PLAZO_DETALLES (
+    id INTEGER NOT NULL,
+    plazoid INTEGER NOT NULL,
+    cuota INTEGER NOT NULL,
+    dias INTEGER NOT NULL,
+    CONSTRAINT pkplazodet PRIMARY KEY (id),
+    CONSTRAINT ukplazodet UNIQUE (plazoid, cuota),
+    CONSTRAINT fkplazo FOREIGN KEY (plazoid) REFERENCES PLAZOS(id)
+);
+
+INSERT INTO PLAZO_DETALLES VALUES 
+(1, 3, 1, 15),
+(2, 3, 2, 30),
+(3, 3, 3, 45),
+(4, 3, 4, 55);
+
+-- CLIENTES
+CREATE TABLE CLIENTES (
+    id INTEGER NOT NULL,
+    nombres VARCHAR(200),
+    apellidos VARCHAR(200),
+    documentonro VARCHAR(20),
+    direccion VARCHAR(200),
+    email VARCHAR(200),
+    telefono VARCHAR(200),
+    activo SMALLINT,
+    CONSTRAINT pkcli PRIMARY KEY (id)
+);
+
+INSERT INTO CLIENTES VALUES
+(1, 'NOMBRES', 'APELLIDOS', 'DOCUM', 'DIRECC', 'EMAIL', 'TELEF', 1);
+
+-- TALONARIOS
+CREATE TABLE TALONARIOS (
+    id INTEGER NOT NULL,
+    nroinicial INTEGER NOT NULL,
+    nrofinal INTEGER NOT NULL,
+    seriea VARCHAR(5) NOT NULL,
+    serieb VARCHAR(5) NOT NULL,
+    timbrado VARCHAR(15) NOT NULL,
+    vigenciaincio DATE NOT NULL,
+    vigenciafin DATE NOT NULL,
+    activo SMALLINT,
+    CONSTRAINT pktalon PRIMARY KEY (id)
+);
+
+INSERT INTO TALONARIOS VALUES
+(1, 1, 30, '001', '001', '1256548', '2025-01-01', '2025-12-31', 1);
+
+-- TALONARIO_DETALLE
+CREATE TABLE TALONARIO_DETALLE (
+    id INTEGER NOT NULL,
+    talonarioid INTEGER NOT NULL,
+    tabla VARCHAR(100) NOT NULL,
+    tablaid INTEGER NOT NULL,
+    talonarionro INTEGER NOT NULL,
+    CONSTRAINT pktalondet PRIMARY KEY (id),
+    CONSTRAINT fktalon FOREIGN KEY (talonarioid) REFERENCES TALONARIOS(id),
+    CONSTRAINT uktalon UNIQUE (talonarioid, talonarionro)
+);
+
+-- MONEDAS
+CREATE TABLE MONEDAS (
+    id INTEGER NOT NULL,
+    moneda VARCHAR(50) NOT NULL,
+    abrebiatura VARCHAR(5) NOT NULL,
+    decimales INTEGER NOT NULL,
+    activo SMALLINT NOT NULL,
+    CONSTRAINT pk_monedas PRIMARY KEY (id)
+);
+
+INSERT INTO MONEDAS VALUES
+(1, 'Guaraní', 'G', 0, 1),
+(2, 'Dólar', '$', 3, 1);
+
+-- DEPOSITOS
+CREATE TABLE DEPOSITOS (
+    id INTEGER NOT NULL,
+    deposito VARCHAR(200) NOT NULL,
+    direccion VARCHAR(150),
+    telefono VARCHAR(15),
+    CONSTRAINT pkdeposito PRIMARY KEY (id)
+);
+
+INSERT INTO DEPOSITOS VALUES
+(1, 'Casa Central', 'Asunción', '0961456321');
+
+CREATE TABLE VENTAS(
+    id INT PRIMARY KEY,
+    fechaproceso TIMESTAMP,
+    fechafactura TIMESTAMP,
+    clienteid INT NOT NULL,
+    serie VARCHAR(10),
+    nrofactura INT NOT NULL,
+    totalexento DECIMAL(18,5) NOT NULL,
+    totalimpuesto DECIMAL(18,5) NOT NULL,
+    totalbase DECIMAL(18,5) NOT NULL,
+    totalfactura DECIMAL(18,5) NOT NULL,
+    depositoid INT NOT NULL,
+    monedaid INT NOT NULL,
+    tipodocid INT NOT NULL,
+    plazoid INT NOT NULL,
+    talonarioid INT NOT NULL,
+    CONSTRAINT fkvtacli FOREIGN KEY (clienteid) REFERENCES CLIENTES(id),
+    CONSTRAINT fkvtadpto FOREIGN KEY (depositoid) REFERENCES DEPOSITOS(id),
+    CONSTRAINT fkvtamoneda FOREIGN KEY (monedaid) REFERENCES MONEDAS(id),
+    CONSTRAINT fkvtatipodoc FOREIGN KEY (tipodocid) REFERENCES TIPOS_DOCUMENTO(id),
+    CONSTRAINT fkvtaplazo FOREIGN KEY (plazoid) REFERENCES PLAZOS(id),
+    CONSTRAINT fkvtatalon FOREIGN KEY (talonarioid) REFERENCES TALONARIOS(id)
+);
+
+INSERT INTO VENTAS VALUES
+(1, '2025-05-16', '2025-05-16', 1, '001-001', 1, 0, 90909, 909091, 1000000, 1, 1, 1, 3, 1);
+
+
+CREATE TABLE CUENTAS_COBRAR(
+    id INT PRIMARY KEY,
+    tabla VARCHAR(100) NOT NULL,
+    tablaid INT NOT NULL,
+    cuota INT NOT NULL,
+    importe DECIMAL(18,5) NOT NULL,
+    cobrado DECIMAL(18,5) NOT NULL,
+    vence TIMESTAMP NOT NULL,
+    CONSTRAINT ukctacob UNIQUE (tabla, tablaid, cuota)
+);
+
+CREATE OR REPLACE FUNCTION trg_ins_ventas() RETURNS TRIGGER AS $$
+DECLARE
+    nCuotas INT := 0;
+    isIrregular SMALLINT := 0;
+    importecuota NUMERIC(18,5) := 0.0;
+    ultimacuota NUMERIC(18,5) := 0.0;
+    irow INT := 1;
+    lastId INT := 0;
+    vto TIMESTAMP;
+    talonlastid INT := 0;
+    acredito INT := 0;
+    doctipoid INT := -1;
+    plazotipoid INT := -1;
+    decimales INT := 0;
+BEGIN
+    SELECT COALESCE(td.tipoid, -1) INTO doctipoid FROM TIPOS_DOCUMENTO td WHERE td.id = NEW.tipodocid;
+    SELECT COALESCE(p.tipoid, -1) INTO plazotipoid FROM PLAZOS p WHERE p.id = NEW.plazoid;
+
+    IF (doctipoid < 0 OR plazotipoid < 0) OR (doctipoid <> plazotipoid) THEN
+        RAISE EXCEPTION 'Tipo de documentos y plazos no coinciden.';
+    END IF;
+
+    SELECT COALESCE(p.cuotas , 0), COALESCE(p.irregular, 0)
+    INTO nCuotas, isIrregular FROM PLAZOS p WHERE p.id = NEW.plazoid;
+
+    IF nCuotas = 0 THEN
+        RAISE EXCEPTION 'Ingrese cantidad de cuotas.';
+    END IF;
+
+    SELECT m.decimales INTO decimales FROM MONEDAS m WHERE m.id = NEW.monedaid;
+
+    importecuota := ROUND(NEW.totalfactura / nCuotas, decimales);
+
+    IF importecuota = 0 THEN
+        RAISE EXCEPTION 'El importe de cuotas no puede ser cero.';
+    END IF;
+
+    ultimacuota := NEW.totalfactura - (importecuota * (nCuotas - 1));
+
+    SELECT COALESCE(td.tipoid, 0) INTO acredito FROM TIPOS_DOCUMENTO td WHERE td.id = NEW.tipodocid;
+
+    SELECT COALESCE(MAX(id), 0) INTO lastId FROM CUENTAS_COBRAR;
+
+    IF acredito = 0 THEN
+        INSERT INTO CUENTAS_COBRAR VALUES((lastId + 1), 'VENTAS', NEW.id, 1, NEW.totalfactura, 0, NEW.fechafactura);
+    ELSE
+        IF isIrregular = 1 THEN
+            WHILE irow <= nCuotas LOOP
+                SELECT NEW.fechafactura + (d.dias || ' days')::INTERVAL INTO vto
+                FROM PLAZO_DETALLES d
+                WHERE d.plazoid = NEW.plazoid AND d.cuota = irow;
+
+                IF irow = nCuotas THEN
+                    INSERT INTO CUENTAS_COBRAR VALUES((lastId + irow), 'VENTAS', NEW.id, irow, ultimacuota, 0, vto);
+                ELSE
+                    INSERT INTO CUENTAS_COBRAR VALUES((lastId + irow), 'VENTAS', NEW.id, irow, importecuota, 0, vto);
+                END IF;
+
+                irow := irow + 1;
+            END LOOP;
+        ELSE
+            WHILE irow <= nCuotas LOOP
+                vto := NEW.fechafactura + (irow || ' months')::INTERVAL;
+
+                IF irow = nCuotas THEN
+                    INSERT INTO CUENTAS_COBRAR VALUES((lastId + irow), 'VENTAS', NEW.id, irow, ultimacuota, 0, vto);
+                ELSE
+                    INSERT INTO CUENTAS_COBRAR VALUES((lastId + irow), 'VENTAS', NEW.id, irow, importecuota, 0, vto);
+                END IF;
+
+                irow := irow + 1;
+            END LOOP;
+        END IF;
+    END IF;
+
+    SELECT COALESCE(MAX(td.id), 0) + 1 INTO talonlastid FROM TALONARIO_DETALLE td;
+
+    INSERT INTO TALONARIO_DETALLE VALUES (
+        talonlastid, NEW.talonarioid, 'VENTAS', NEW.id, NEW.nrofactura
+    );
+
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER ins_ventas
+AFTER INSERT ON VENTAS
+FOR EACH ROW EXECUTE FUNCTION trg_ins_ventas();
+
+
+--Crear mas clientes
+INSERT INTO public.clientes
+(id, nombres, apellidos, documentonro, direccion, email, telefono, activo)
+VALUES(2, 'Ivan Alfredo', 'Sanchez Rojas', '1332320', 'Mariscal Lopez C/ Carmelitas', 'ivan@gmail.com', '0981123432', 0);
+
+
+-- Arreglar el tipoid del plazo Contado
+UPDATE plazos SET tipoid = 0 WHERE id = 1;
+
+-- Arreglar el tipoid de los plazos de Crédito
+UPDATE plazos SET tipoid = 1 WHERE id IN (2, 3);
+
+
+--Script megacorregido
+
+-- Eliminar triggers y funciones si existen
+DROP TRIGGER IF EXISTS ins_ventas ON VENTAS;
+DROP FUNCTION IF EXISTS trg_ins_ventas();
+
+-- Eliminar tablas si existen (en orden de dependencias inversas)
+DROP TABLE IF EXISTS CUENTAS_COBRAR;
+DROP TABLE IF EXISTS VENTAS;
+DROP TABLE IF EXISTS TALONARIO_DETALLE;
+DROP TABLE IF EXISTS TALONARIOS;
+DROP TABLE IF EXISTS PLAZO_DETALLES;
+DROP TABLE IF EXISTS PLAZOS;
+DROP TABLE IF EXISTS TIPOS_DOCUMENTO;
+DROP TABLE IF EXISTS MONEDAS;
+DROP TABLE IF EXISTS DEPOSITOS;
+DROP TABLE IF EXISTS CLIENTES;
+
 -- Crear tablas
 CREATE TABLE TIPOS_DOCUMENTO (
     id INTEGER NOT NULL,
@@ -237,11 +514,4 @@ BEGIN
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
-
-
--- Arreglar el tipoid del plazo Contado
-UPDATE plazos SET tipoid = 0 WHERE id = 1;
-
--- Arreglar el tipoid de los plazos de Crédito
-UPDATE plazos SET tipoid = 1 WHERE id IN (2, 3);
 
