@@ -238,3 +238,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+
+-- Arreglar el tipoid del plazo Contado
+UPDATE plazos SET tipoid = 0 WHERE id = 1;
+
+-- Arreglar el tipoid de los plazos de Crédito
+UPDATE plazos SET tipoid = 1 WHERE id IN (2, 3);
+
