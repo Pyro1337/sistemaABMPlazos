@@ -185,4 +185,18 @@
         }
     });
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const totalBaseInput = document.getElementById('{{ form.totalbase.id_for_label }}');
+    const totalImpuestoInput = document.getElementById('{{ form.totalimpuesto.id_for_label }}');
+
+    if (totalBaseInput && totalImpuestoInput) {
+        totalBaseInput.addEventListener('input', function () {
+            const base = parseFloat(totalBaseInput.value.replace(',', '.')) || 0;
+            const impuesto = (base / 11).toFixed(2);  // IVA incluido en el precio
+            totalImpuestoInput.value = impuesto;
+        });
+    }
+});
+</script>
 {% endblock %}
